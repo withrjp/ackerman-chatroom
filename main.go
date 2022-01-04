@@ -1,15 +1,34 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"ackerman-chatroom/bootstrap"
+	"ackerman-chatroom/global"
 )
 
 func main() {
-	hub := newHub()
-	go hub.run()
-	r := gin.Default()
-	r.GET("/ws", func(c *gin.Context) {
-		serveWs(hub, c.Writer, c.Request)
-	})
-	r.Run()
+	// 初始化配置
+	bootstrap.InitializeConfig()
+
+	// 初始化日志
+	global.App.Log = bootstrap.InitializeLog()
+	global.App.Log.Info("log init success!")
+
+	// 初始化数据库
+	global.App.DB = bootstrap.InitializeDB()
+	// 程序关闭前，释放数据库连接
+	defer func() {
+		if global.App.DB != nil {
+			db, _ := global.App.DB.DB()
+			db.Close()
+		}
+	}()
+
+	// 初始化验证器
+	bootstrap.InitializeValidator()
+
+	// 初始化 Redis
+	global.App.Redis = bootstrap.InitializeRedis()
+
+	// 启动服务器
+	bootstrap.RunServer()
 }
